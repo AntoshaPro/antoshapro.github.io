@@ -53,7 +53,7 @@
         }
 
         // Загрузка данных из таблицы
-        fetch('ССЫЛКА_НА_ОПУБЛИКОВАННУЮ_ТАБЛИЦУ_CSV')
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pubhtml?gid=0&single=true')
           .then(r => r.text())
           .then(csv => {
             const rows = csv.split('\n').slice(4);
