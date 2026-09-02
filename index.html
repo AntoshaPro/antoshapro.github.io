@@ -35,27 +35,53 @@
     tg.ready();
     tg.expand();
 
-    // Загрузка данных из таблицы
+    function parseCSVLine(line) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    }
+
     fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
       .then(r => r.text())
       .then(csv => {
         document.getElementById('loading').style.display = 'none';
-        
-        const rows = csv.split('\n').slice(4);
+
+        const rows = csv.trim().split(/\r?\n/);
+        const dataRows = rows.slice(5);
+
         let html = '';
-        
-        rows.forEach(row => {
-          const cols = row.split(',');
-          const nickname = cols[0];
-          const price = cols[1];
-          const minLimit = cols[2];
-          const spread = cols[5];
-          const online = cols[7];
-          
-          if (parseFloat(spread) > 18 && parseFloat(minLimit) <= 5000) {
+
+        dataRows.forEach(row => {
+          const cols = parseCSVLine(row);
+
+          const nickname = cols[0] || '';
+          const price = cols[1] || '';
+          const minLimitRaw = (cols[2] || '').replace(/\s/g, '').replace(',', '.');
+          const spreadRaw = (cols[5] || '').replace('%', '').replace(',', '.');
+          const online = (cols[7] || '').trim();
+
+          const minLimit = parseFloat(minLimitRaw);
+          const spread = parseFloat(spreadRaw);
+
+          if (nickname && !isNaN(spread) && spread > 15) {
             html += `
               <div class="deal">
-                <b>${nickname}</b> <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
+                <b>${nickname}</b>
+                <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
                 <span class="price">Цена: ${price}</span> | 
                 <span class="spread">Спред: ${spread}%</span><br>
                 <span class="limit">Мин. лимит: ${minLimit}</span>
@@ -63,8 +89,12 @@
             `;
           }
         });
-        
-        document.getElementById('deals').innerHTML = html;
+
+        document.getElementById('deals').innerHTML = html || '<p>Подходящих сделок нет.</p>';
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('loading').textContent = 'Ошибка загрузки таблицы.';
       });
   </script>
 </body>
