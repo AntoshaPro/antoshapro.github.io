@@ -10,6 +10,10 @@
       padding: 20px;
       background: var(--tg-theme-bg-color, #fff);
       color: var(--tg-theme-text-color, #000);
+      margin: 0;
+    }
+    h2 {
+      margin-top: 0;
     }
     .deal {
       border: 1px solid #ddd;
@@ -20,13 +24,25 @@
     }
     .spread { color: #00C853; font-weight: bold; font-size: 18px; }
     .price { font-size: 16px; }
-    .limit { color: #888; }
-    .online { background: #66cc66; color: #fff; padding: 4px 8px; border-radius: 4px; }
-    .offline { background: #cc3333; color: #fff; padding: 4px 8px; border-radius: 4px; }
+    .limit { color: #888; font-size: 14px; }
+    .online { background: #66cc66; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    .offline { background: #cc3333; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    #loading {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+    }
+    .last-update {
+      font-size: 12px;
+      color: #888;
+      text-align: right;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <h2>🔥 P2P Сделки</h2>
+  <div class="last-update" id="lastUpdate"></div>
   <div id="loading">Загрузка...</div>
   <div id="deals"></div>
 
@@ -55,47 +71,66 @@
       return result;
     }
 
-    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
-      .then(r => r.text())
-      .then(csv => {
-        document.getElementById('loading').style.display = 'none';
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv';
 
-        const rows = csv.trim().split(/\r?\n/);
-        const dataRows = rows.slice(5);
+    function loadDeals() {
+      fetch(CORS_PROXY + encodeURIComponent(SHEET_URL))
+        .then(r => {
+          if (!r.ok) throw new Error('Network error');
+          return r.text();
+        })
+        .then(csv => {
+          document.getElementById('loading').style.display = 'none';
 
-        let html = '';
+          const rows = csv.trim().split(/\r?\n/);
+          const dataRows = rows.slice(5);
 
-        dataRows.forEach(row => {
-          const cols = parseCSVLine(row);
+          let html = '';
 
-          const nickname = cols[0] || '';
-          const price = cols[1] || '';
-          const minLimitRaw = (cols[2] || '').replace(/\s/g, '').replace(',', '.');
-          const spreadRaw = (cols[5] || '').replace('%', '').replace(',', '.');
-          const online = (cols[7] || '').trim();
+          dataRows.forEach(row => {
+            const cols = parseCSVLine(row);
 
-          const minLimit = parseFloat(minLimitRaw);
-          const spread = parseFloat(spreadRaw);
+            const nickname = cols[0] || '';
+            const price = cols[1] || '';
+            const minLimitRaw = (cols[2] || '').replace(/\s/g, '').replace(',', '.');
+            const spreadRaw = (cols[5] || '').replace('%', '').replace(',', '.');
+            const online = (cols[7] || '').trim();
 
-          if (nickname && !isNaN(spread) && spread > 15) {
-            html += `
-              <div class="deal">
-                <b>${nickname}</b>
-                <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
-                <span class="price">Цена: ${price}</span> | 
-                <span class="spread">Спред: ${spread}%</span><br>
-                <span class="limit">Мин. лимит: ${minLimit}</span>
-              </div>
-            `;
-          }
+            const minLimit = parseFloat(minLimitRaw);
+            const spread = parseFloat(spreadRaw);
+
+            if (nickname && !isNaN(spread) && !isNaN(minLimit) && spread > 18 && minLimit <= 5000) {
+              html += `
+                <div class="deal">
+                  <b>${nickname}</b>
+                  <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
+                  <span class="price">Цена: ${price}</span> | 
+                  <span class="spread">Спред: ${spread}%</span><br>
+                  <span class="limit">Мин. лимит: ${minLimit}</span>
+                </div>
+              `;
+            }
+          });
+
+          document.getElementById('deals').innerHTML = html || '<p>Подходящих сделок нет.</p>';
+          
+          // Показываем время последнего обновления
+          const now = new Date();
+          document.getElementById('lastUpdate').textContent = 
+            'Обновлено: ' + now.toLocaleTimeString();
+        })
+        .catch(err => {
+          console.error('Ошибка:', err);
+          document.getElementById('loading').textContent = 'Ошибка: ' + err.message;
         });
+    }
 
-        document.getElementById('deals').innerHTML = html || '<p>Подходящих сделок нет.</p>';
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById('loading').textContent = 'Ошибка загрузки таблицы.';
-      });
+    // Загрузить сразу
+    loadDeals();
+
+    // Обновлять каждые 30 секунд
+    setInterval(loadDeals, 30000);
   </script>
 </body>
 </html>
