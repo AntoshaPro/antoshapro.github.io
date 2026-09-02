@@ -36,7 +36,7 @@
     tg.expand();
 
     // Загрузка данных из таблицы
-    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pubhtml?gid=0&single=true')
+    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
       .then(r => r.text())
       .then(csv => {
         document.getElementById('loading').style.display = 'none';
