@@ -238,6 +238,10 @@
   }
   .spread-num.warm{ color:var(--amber); }
   .spread-label{ font-size:9px; color:var(--dim-2); margin-top:3px; letter-spacing:.3px; }
+  .profit-num{
+    font-family:var(--mono); font-weight:700; font-size:12px;
+    color:var(--amber); margin-top:6px; white-space:nowrap;
+  }
 
   .bar-track{
     margin-top:11px; height:4px; border-radius:2px;
@@ -393,6 +397,11 @@
     return 'до ' + Number(v).toLocaleString('ru-RU');
   }
 
+  function fmtRub(v){
+    if (v === undefined || v === null || isNaN(v)) return '–';
+    return Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+  }
+
   function markDirty(){
     state.dirty = true;
     applyBar.classList.add('show');
@@ -497,7 +506,7 @@
   }
   function parseNumber(str){
     if(!str) return NaN;
-    return parseFloat(str.replace(/\s/g,'').replace(',', '.'));
+    return parseFloat(str.replace(/\s/g,'').replace(',', '.').replace('%',''));
   }
 
   function loadDeals(){
@@ -514,9 +523,10 @@
           const price = cols[1] || '';
           const minLimit = parseNumber(cols[2]);
           const spread = parseNumber(cols[5]);
+          const profit = parseNumber(cols[6]);
           const online = (cols[7] || '').trim();
           if(nickname && !isNaN(spread) && !isNaN(minLimit)){
-            allDeals.push({nickname, price, minLimit, spread, online});
+            allDeals.push({nickname, price, minLimit, spread, profit, online});
           }
         });
         lastLoad = Date.now();
@@ -552,6 +562,7 @@
       const isTop = idx === 0 && deal.spread > minSpread * 1.15;
       const warm = deal.spread < minSpread * 1.3;
       const barPct = Math.max(8, Math.min(100, (deal.spread / maxSpread) * 100));
+      const hasProfit = !isNaN(deal.profit);
       html += `
         <div class="card ${isTop ? 'top' : ''}">
           ${isTop ? '<div class="top-tag">TOP</div>' : ''}
@@ -569,6 +580,7 @@
             <div class="spread-box">
               <div class="spread-num ${warm ? 'warm' : ''}">${deal.spread}%</div>
               <div class="spread-label">СПРЕД</div>
+              ${hasProfit ? `<div class="profit-num">+${fmtRub(deal.profit)} ₽</div>` : ''}
             </div>
           </div>
           <div class="bar-track"><div class="bar-fill" style="width:${barPct}%"></div></div>
