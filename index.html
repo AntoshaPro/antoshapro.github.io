@@ -76,7 +76,6 @@
     tg.ready();
     tg.expand();
 
-    // Глобальные данные
     let allDeals = [];
 
     function parseCSVLine(line) {
@@ -101,7 +100,7 @@
 
     function parseNumber(str) {
       if (!str) return NaN;
-      return parseFloat(str.replace(',', '.'));
+      return parseFloat(str.replace(/\s/g, '').replace(',', '.'));
     }
 
     function loadDeals() {
@@ -166,10 +165,7 @@
       document.getElementById('deals').innerHTML = html || '<p>Подходящих сделок нет.</p>';
     }
 
-    // Загрузить при старте
     loadDeals();
-
-    // Автообновление каждые 30 секунд
     setInterval(loadDeals, 30000);
   </script>
 </body>
