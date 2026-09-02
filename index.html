@@ -55,6 +55,12 @@
       return result;
     }
 
+    // Парсинг числа с запятой (русская локаль)
+    function parseNumber(str) {
+      if (!str) return NaN;
+      return parseFloat(str.replace(',', '.'));
+    }
+
     fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
       .then(r => r.text())
       .then(csv => {
@@ -70,14 +76,11 @@
 
           const nickname = cols[0] || '';
           const price = cols[1] || '';
-          const minLimitRaw = (cols[2] || '').replace(/\s/g, '').replace(',', '.');
-          const spreadRaw = (cols[5] || '').replace('%', '').replace(',', '.');
+          const minLimit = parseNumber(cols[2]);
+          const spread = parseNumber(cols[5]);
           const online = (cols[7] || '').trim();
 
-          const minLimit = parseFloat(minLimitRaw);
-          const spread = parseFloat(spreadRaw);
-
-          if (nickname && !isNaN(spread) && spread > 15) {
+          if (nickname && !isNaN(spread) && !isNaN(minLimit) && spread > 18 && minLimit <= 5000) {
             html += `
               <div class="deal">
                 <b>${nickname}</b>
