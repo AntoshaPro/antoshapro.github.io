@@ -30,42 +30,42 @@
   <div id="loading">Загрузка...</div>
   <div id="deals"></div>
 
-<script>
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-  // Загрузка данных из таблицы
-  fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pubhtml?gid=0&single=true')
-    .then(r => r.text())
-    .then(csv => {
-      document.getElementById('loading').style.display = 'none';
-      
-      const rows = csv.split('\n').slice(4);
-      let html = '';
-      
-      rows.forEach(row => {
-        const cols = row.split(',');
-        const nickname = cols[0];
-        const price = cols[1];
-        const minLimit = cols[2];
-        const spread = cols[5];
-        const online = cols[7];
+    // Загрузка данных из таблицы
+    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pubhtml?gid=0&single=true')
+      .then(r => r.text())
+      .then(csv => {
+        document.getElementById('loading').style.display = 'none';
         
-        if (parseFloat(spread) > 18 && parseFloat(minLimit) <= 5000) {
-          html += `
-            <div class="deal">
-              <b>${nickname}</b> <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
-              <span class="price">Цена: ${price}</span> | 
-              <span class="spread">Спред: ${spread}%</span><br>
-              <span class="limit">Мин. лимит: ${minLimit}</span>
-            </div>
-          `;
-        }
+        const rows = csv.split('\n').slice(4);
+        let html = '';
+        
+        rows.forEach(row => {
+          const cols = row.split(',');
+          const nickname = cols[0];
+          const price = cols[1];
+          const minLimit = cols[2];
+          const spread = cols[5];
+          const online = cols[7];
+          
+          if (parseFloat(spread) > 18 && parseFloat(minLimit) <= 5000) {
+            html += `
+              <div class="deal">
+                <b>${nickname}</b> <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
+                <span class="price">Цена: ${price}</span> | 
+                <span class="spread">Спред: ${spread}%</span><br>
+                <span class="limit">Мин. лимит: ${minLimit}</span>
+              </div>
+            `;
+          }
+        });
+        
+        document.getElementById('deals').innerHTML = html;
       });
-      
-      document.getElementById('deals').innerHTML = html;
-    });
-</script>
+  </script>
 </body>
 </html>
