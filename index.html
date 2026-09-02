@@ -30,58 +30,42 @@
   <div id="loading">Загрузка...</div>
   <div id="deals"></div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
 
-    const userId = tg.initDataUnsafe?.user?.id;
-
-    // Проверка доступа
-    fetch(`https://script.google.com/macros/exec/SCRIPT_ID?userId=${userId}&action=checkAccess`)
-      .then(r => r.json())
-      .then(data => {
-        document.getElementById('loading').style.display = 'none';
+  // Загрузка данных из таблицы
+  fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pubhtml?gid=0&single=true')
+    .then(r => r.text())
+    .then(csv => {
+      document.getElementById('loading').style.display = 'none';
+      
+      const rows = csv.split('\n').slice(4);
+      let html = '';
+      
+      rows.forEach(row => {
+        const cols = row.split(',');
+        const nickname = cols[0];
+        const price = cols[1];
+        const minLimit = cols[2];
+        const spread = cols[5];
+        const online = cols[7];
         
-        if (!data.access) {
-          document.body.innerHTML = `
-            <h3>🔒 Доступ закрыт</h3>
-            <p>Для доступа к сP2P-сделкам оплатите подписку.</p>
-            <button onclick="tg.MainButton.showProgress()">Купить доступ</button>
+        if (parseFloat(spread) > 18 && parseFloat(minLimit) <= 5000) {
+          html += `
+            <div class="deal">
+              <b>${nickname}</b> <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
+              <span class="price">Цена: ${price}</span> | 
+              <span class="spread">Спред: ${spread}%</span><br>
+              <span class="limit">Мин. лимит: ${minLimit}</span>
+            </div>
           `;
-          return;
         }
-
-        // Загрузка данных из таблицы
-        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pubhtml?gid=0&single=true')
-          .then(r => r.text())
-          .then(csv => {
-            const rows = csv.split('\n').slice(4);
-            let html = '';
-            
-            rows.forEach(row => {
-              const cols = row.split(',');
-              const nickname = cols[0];
-              const price = cols[1];
-              const minLimit = cols[2];
-              const spread = cols[5];
-              const online = cols[7];
-              
-              if (parseFloat(spread) > 18 && parseFloat(minLimit) <= 5000) {
-                html += `
-                  <div class="deal">
-                    <b>${nickname}</b> <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
-                    <span class="price">Цена: ${price}</span> | 
-                    <span class="spread">Спред: ${spread}%</span><br>
-                    <span class="limit">Мин. лимит: ${minLimit}</span>
-                  </div>
-                `;
-              }
-            });
-            
-            document.getElementById('deals').innerHTML = html;
-          });
       });
-  </script>
+      
+      document.getElementById('deals').innerHTML = html;
+    });
+</script>
 </body>
 </html>
