@@ -23,10 +23,51 @@
     .limit { color: #888; }
     .online { background: #66cc66; color: #fff; padding: 4px 8px; border-radius: 4px; }
     .offline { background: #cc3333; color: #fff; padding: 4px 8px; border-radius: 4px; }
+    .filters {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+      border-radius: 12px;
+    }
+    .filters label {
+      margin-right: 15px;
+    }
+    .filters input {
+      width: 80px;
+      padding: 5px;
+      margin-left: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .filters button {
+      padding: 8px 16px;
+      background: #4285F4;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .filters button:hover {
+      background: #3367D6;
+    }
   </style>
 </head>
 <body>
   <h2>🔥 P2P Сделки</h2>
+  
+  <div class="filters">
+    <label>
+      Спред > 
+      <input type="number" id="minSpread" value="18" step="0.1"> %
+    </label>
+    <label>
+      Мин. лимит ≤ 
+      <input type="number" id="maxLimit" value="5000" step="100">
+    </label>
+    <button onclick="applyFilters()">Применить</button>
+  </div>
+
   <div id="loading">Загрузка...</div>
   <div id="deals"></div>
 
@@ -34,6 +75,9 @@
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
+
+    // Глобальные данные
+    let allDeals = [];
 
     function parseCSVLine(line) {
       const result = [];
@@ -55,50 +99,78 @@
       return result;
     }
 
-    // Парсинг числа с запятой (русская локаль)
     function parseNumber(str) {
       if (!str) return NaN;
       return parseFloat(str.replace(',', '.'));
     }
 
-    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
-      .then(r => r.text())
-      .then(csv => {
-        document.getElementById('loading').style.display = 'none';
+    function loadDeals() {
+      fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
+        .then(r => r.text())
+        .then(csv => {
+          document.getElementById('loading').style.display = 'none';
 
-        const rows = csv.trim().split(/\r?\n/);
-        const dataRows = rows.slice(5);
+          const rows = csv.trim().split(/\r?\n/);
+          const dataRows = rows.slice(5);
 
-        let html = '';
+          allDeals = [];
 
-        dataRows.forEach(row => {
-          const cols = parseCSVLine(row);
+          dataRows.forEach(row => {
+            const cols = parseCSVLine(row);
 
-          const nickname = cols[0] || '';
-          const price = cols[1] || '';
-          const minLimit = parseNumber(cols[2]);
-          const spread = parseNumber(cols[5]);
-          const online = (cols[7] || '').trim();
+            const nickname = cols[0] || '';
+            const price = cols[1] || '';
+            const minLimit = parseNumber(cols[2]);
+            const spread = parseNumber(cols[5]);
+            const online = (cols[7] || '').trim();
 
-          if (nickname && !isNaN(spread) && !isNaN(minLimit) && spread > 18 && minLimit <= 5000) {
-            html += `
-              <div class="deal">
-                <b>${nickname}</b>
-                <span class="${online === 'Online' ? 'online' : 'offline'}">${online}</span><br>
-                <span class="price">Цена: ${price}</span> | 
-                <span class="spread">Спред: ${spread}%</span><br>
-                <span class="limit">Мин. лимит: ${minLimit}</span>
-              </div>
-            `;
-          }
+            if (nickname && !isNaN(spread) && !isNaN(minLimit)) {
+              allDeals.push({
+                nickname,
+                price,
+                minLimit,
+                spread,
+                online
+              });
+            }
+          });
+
+          applyFilters();
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('loading').textContent = 'Ошибка загрузки таблицы.';
         });
+    }
 
-        document.getElementById('deals').innerHTML = html || '<p>Подходящих сделок нет.</p>';
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById('loading').textContent = 'Ошибка загрузки таблицы.';
+    function applyFilters() {
+      const minSpread = parseFloat(document.getElementById('minSpread').value) || 18;
+      const maxLimit = parseFloat(document.getElementById('maxLimit').value) || 5000;
+
+      let html = '';
+
+      allDeals.forEach(deal => {
+        if (deal.spread > minSpread && deal.minLimit <= maxLimit) {
+          html += `
+            <div class="deal">
+              <b>${deal.nickname}</b>
+              <span class="${deal.online === 'Online' ? 'online' : 'offline'}">${deal.online}</span><br>
+              <span class="price">Цена: ${deal.price}</span> | 
+              <span class="spread">Спред: ${deal.spread}%</span><br>
+              <span class="limit">Мин. лимит: ${deal.minLimit}</span>
+            </div>
+          `;
+        }
       });
+
+      document.getElementById('deals').innerHTML = html || '<p>Подходящих сделок нет.</p>';
+    }
+
+    // Загрузить при старте
+    loadDeals();
+
+    // Автообновление каждые 30 секунд
+    setInterval(loadDeals, 30000);
   </script>
 </body>
 </html>
