@@ -2,160 +2,488 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<title>P2P Order Book</title>
+<title>P2P Arbitrage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A0E14;
-    --panel:#0F141C;
-    --line:#1C2430;
-    --text:#C9D1D9;
-    --dim:#5B6472;
-    --up:#3FB950;
-    --hot:#E3B341;
-    --off:#F85149;
-    --mono: ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --bg:#05070C;
+    --bg-grid: rgba(124,255,178,0.035);
+    --panel:#0C111A;
+    --panel-2:#111826;
+    --line:#1B2433;
+    --line-soft:#151D2A;
+    --text:#EAF1F7;
+    --dim:#6E7A8C;
+    --dim-2:#49535F;
+    --mint:#5CFFB2;
+    --mint-dim:#2E7A57;
+    --violet:#9B8CFF;
+    --red:#FF5C77;
+    --amber:#FFC85C;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
   }
-  *{box-sizing:border-box;}
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
   body{
     margin:0;
-    background:var(--bg);
+    background:
+      radial-gradient(600px 300px at 15% 0%, rgba(155,140,255,0.08), transparent 60%),
+      radial-gradient(600px 260px at 100% 0%, rgba(92,255,178,0.06), transparent 55%),
+      var(--bg);
     color:var(--text);
     font-family:var(--sans);
-    padding:0 0 32px;
+    padding-bottom:calc(24px + var(--safe-bottom));
+    min-height:100%;
   }
+
+  /* ---------- header ---------- */
   header{
-    padding:18px 16px 14px;
-    border-bottom:1px solid var(--line);
-    position:sticky; top:0;
-    background:var(--bg);
-    z-index:5;
+    padding: calc(16px + var(--safe-top)) 16px 14px;
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg, rgba(5,7,12,0.97) 70%, rgba(5,7,12,0.85));
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--line-soft);
   }
-  .title-row{
-    display:flex; align-items:baseline; justify-content:space-between;
+  .brand{
+    display:flex; align-items:center; justify-content:space-between;
   }
-  h1{
-    font-size:15px;
-    font-weight:600;
-    letter-spacing:.2px;
-    margin:0;
-    color:var(--text);
+  .brand-left{ display:flex; align-items:center; gap:9px; }
+  .logo{
+    width:26px; height:26px; border-radius:7px;
+    background:linear-gradient(135deg, var(--mint), var(--violet));
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:800; color:#05070C;
   }
-  .clock{
-    font-family:var(--mono);
-    font-size:11px;
-    color:var(--dim);
+  h1{ font-size:14.5px; font-weight:700; margin:0; letter-spacing:.1px; }
+  .live{
+    display:flex; align-items:center; gap:6px;
+    font-family:var(--mono); font-size:10.5px; color:var(--dim);
   }
-  .cmd{
-    margin-top:12px;
-    display:flex;
-    gap:10px;
-    font-family:var(--mono);
-    font-size:12px;
+  .live .pulse{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--mint);
+    box-shadow:0 0 0 0 rgba(92,255,178,.6);
+    animation:pulse 2s infinite;
   }
-  .cmd .field{
-    flex:1;
-    display:flex;
-    align-items:center;
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(92,255,178,.55); }
+    70%{ box-shadow:0 0 0 7px rgba(92,255,178,0); }
+    100%{ box-shadow:0 0 0 0 rgba(92,255,178,0); }
+  }
+
+  /* stat strip */
+  .stats{
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:8px; margin-top:14px;
+  }
+  .stat{
     background:var(--panel);
     border:1px solid var(--line);
-    border-radius:3px;
-    padding:7px 9px;
-    gap:6px;
+    border-radius:12px;
+    padding:9px 10px;
   }
-  .cmd .field span{ color:var(--dim); white-space:nowrap; }
-  .cmd input{
-    background:transparent;
-    border:none;
-    color:var(--hot);
-    font-family:var(--mono);
-    font-size:12px;
-    width:100%;
-    outline:none;
+  .stat .n{
+    font-family:var(--mono); font-weight:700; font-size:16px;
+    color:var(--text);
   }
-  .cmd button{
+  .stat.hot .n{ color:var(--mint); }
+  .stat .l{ font-size:9.5px; color:var(--dim); margin-top:2px; letter-spacing:.2px; }
+
+  /* ---------- filters ---------- */
+  .filters{ padding:14px 16px 4px; }
+  .filter-block{ margin-bottom:12px; }
+  .filter-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:8px;
+  }
+  .filter-head .label{ font-size:12px; color:var(--dim); font-weight:500; }
+  .filter-head .val{
+    font-family:var(--mono); font-weight:700; font-size:14px; color:var(--mint);
+  }
+  .chips{
+    display:flex; gap:7px; overflow-x:auto; padding-bottom:2px;
+    scrollbar-width:none;
+  }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:none;
+    min-height:40px;
+    padding:0 16px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
     font-family:var(--mono);
-    font-size:12px;
-    background:var(--hot);
-    color:#141008;
-    border:none;
-    border-radius:3px;
-    padding:0 14px;
+    font-size:13px;
     font-weight:600;
-    cursor:pointer;
-  }
-  .colhead{
-    display:grid;
-    grid-template-columns: 1.4fr .6fr 1fr 1fr;
-    gap:8px;
-    padding:10px 16px 6px;
-    font-family:var(--mono);
-    font-size:10px;
     color:var(--dim);
+    cursor:pointer;
+    user-select:none;
+    transition:background .12s, border-color .12s, color .12s, transform .08s;
+  }
+  .chip:active{ transform:scale(.95); }
+  .chip.active{
+    background:rgba(92,255,178,0.12);
+    border-color:var(--mint-dim);
+    color:var(--mint);
+  }
+  .chip.custom-toggle{ color:var(--violet); border-color:rgba(155,140,255,.35); }
+
+  .custom-input-wrap{
+    margin-top:9px;
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:4px 6px 4px 14px;
+    display:none;
+  }
+  .custom-input-wrap.open{ display:flex; }
+  .custom-input-wrap span{ font-size:12px; color:var(--dim); white-space:nowrap; }
+  .custom-input-wrap input{
+    flex:1; min-width:0;
+    background:transparent; border:none; outline:none;
+    font-family:var(--mono); font-size:16px; font-weight:600; color:var(--text);
+    padding:10px 0;
+  }
+  .stepper{ display:flex; gap:2px; }
+  .stepper button{
+    width:38px; height:38px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text);
+    font-size:17px;
+    font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ---------- list ---------- */
+  .section-label{
+    padding:14px 16px 8px;
+    font-size:11px; color:var(--dim-2);
+    letter-spacing:.3px;
+    display:flex; justify-content:space-between;
+  }
+  #loading{
+    padding:40px 16px; text-align:center;
+    font-family:var(--mono); font-size:12px; color:var(--dim);
+  }
+  #loading .spinner{
+    width:22px; height:22px; margin:0 auto 12px;
+    border-radius:50%;
+    border:2px solid var(--line);
+    border-top-color:var(--mint);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .list{ padding:0 16px; display:flex; flex-direction:column; gap:9px; }
+  .card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px 14px 13px;
+    overflow:hidden;
+  }
+  .card.top{
+    border-color:rgba(92,255,178,.4);
+    background:linear-gradient(135deg, rgba(92,255,178,0.07), var(--panel) 55%);
+  }
+  .top-tag{
+    position:absolute; top:0; right:0;
+    background:var(--mint); color:#05130C;
+    font-family:var(--mono); font-size:9px; font-weight:700;
+    padding:4px 9px 4px 11px;
+    border-bottom-left-radius:10px;
     letter-spacing:.4px;
   }
-  #loading{ padding:24px 16px; font-family:var(--mono); font-size:12px; color:var(--dim); }
-  .row{
-    display:grid;
-    grid-template-columns: 1.4fr .6fr 1fr 1fr;
-    gap:8px;
-    align-items:center;
-    padding:11px 16px;
-    border-top:1px solid var(--line);
-    font-family:var(--mono);
-    font-size:12.5px;
+  .card-top{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:10px;
   }
-  .row:hover{ background:var(--panel); }
+  .who{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .avatar{
+    width:32px; height:32px; border-radius:9px; flex:none;
+    background:linear-gradient(135deg, var(--panel-2), #1a2333);
+    border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:var(--dim);
+  }
+  .who-text{ min-width:0; }
   .nick{
-    font-family:var(--sans);
-    font-size:13px;
-    color:var(--text);
-    display:flex; align-items:center; gap:6px;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:14.5px; font-weight:600; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:44vw;
   }
-  .dot{ width:7px; height:7px; border-radius:50%; flex:none; }
-  .dot.on{ background:var(--up); box-shadow:0 0 6px var(--up); }
-  .dot.off{ background:var(--off); }
+  .status-row{
+    display:flex; align-items:center; gap:5px; margin-top:2px;
+  }
+  .dot{ width:6px; height:6px; border-radius:50%; flex:none; }
+  .dot.on{ background:var(--mint); box-shadow:0 0 0 0 rgba(92,255,178,.6); animation:pulse 2s infinite; }
+  .dot.off{ background:var(--dim-2); }
+  .status-text{ font-family:var(--mono); font-size:10px; color:var(--dim); }
+
+  .spread-box{ text-align:right; flex:none; }
+  .spread-num{
+    font-family:var(--mono); font-weight:700; font-size:22px; line-height:1;
+    color:var(--mint);
+  }
+  .spread-num.warm{ color:var(--amber); }
+  .spread-label{ font-size:9px; color:var(--dim-2); margin-top:3px; letter-spacing:.3px; }
+
+  .bar-track{
+    margin-top:11px; height:4px; border-radius:2px;
+    background:var(--line-soft); overflow:hidden;
+  }
+  .bar-fill{
+    height:100%; border-radius:2px;
+    background:linear-gradient(90deg, var(--mint-dim), var(--mint));
+  }
+
+  .card-bottom{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:11px;
+    font-family:var(--mono); font-size:11.5px;
+  }
   .price{ color:var(--text); }
   .limit{ color:var(--dim); }
-  .spread{ text-align:right; font-weight:600; }
-  .spread.hot{ color:var(--hot); }
-  .spread.warm{ color:var(--up); }
-  .empty{ padding:30px 16px; text-align:center; color:var(--dim); font-family:var(--mono); font-size:12px; }
+
+  .empty{
+    text-align:center; padding:50px 20px; color:var(--dim);
+  }
+  .empty .big{ font-size:34px; margin-bottom:8px; }
+  .empty .msg{ font-size:13px; color:var(--dim); }
+  .empty .sub{ font-family:var(--mono); font-size:11px; color:var(--dim-2); margin-top:4px; }
+
+  .footer-note{
+    text-align:center; padding:18px 16px 4px;
+    font-family:var(--mono); font-size:10px; color:var(--dim-2);
+  }
+
+  .apply-bar{
+    position:sticky; bottom:0; z-index:15;
+    padding:12px 16px calc(12px + var(--safe-bottom));
+    background:linear-gradient(0deg, rgba(5,7,12,1) 60%, rgba(5,7,12,0));
+    display:none;
+  }
+  .apply-bar.show{ display:block; }
+  .apply-btn{
+    width:100%; min-height:50px;
+    border-radius:14px; border:none;
+    background:linear-gradient(135deg, var(--mint), #4AE0A0);
+    color:#052014; font-family:var(--sans); font-weight:700; font-size:15px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
 </style>
 </head>
 <body>
+
 <header>
-  <div class="title-row">
-    <h1>P2P / USDT&nbsp;·&nbsp;RUB</h1>
-    <div class="clock" id="clock">--:--:--</div>
+  <div class="brand">
+    <div class="brand-left">
+      <div class="logo">₽</div>
+      <h1>P2P Arbitrage</h1>
+    </div>
+    <div class="live"><span class="pulse"></span><span id="updatedAgo">обновлено сейчас</span></div>
   </div>
-  <div class="cmd">
-    <div class="field"><span>спред&gt;</span><input id="minSpread" type="number" value="18" step="0.1"></div>
-    <div class="field"><span>лимит≤</span><input id="maxLimit" type="number" value="5000" step="100"></div>
-    <button onclick="applyFilters()">GO</button>
+  <div class="stats">
+    <div class="stat hot"><div class="n" id="statCount">–</div><div class="l">сделок найдено</div></div>
+    <div class="stat"><div class="n" id="statBest">–</div><div class="l">лучший спред</div></div>
+    <div class="stat"><div class="n" id="statOnline">–</div><div class="l">онлайн сейчас</div></div>
   </div>
 </header>
 
-<div class="colhead">
-  <div>Продавец</div><div></div><div>Цена</div><div style="text-align:right">Спред</div>
+<div class="filters">
+  <div class="filter-block">
+    <div class="filter-head">
+      <span class="label">Минимальный спред</span>
+      <span class="val" id="spreadVal">18%</span>
+    </div>
+    <div class="chips" id="spreadChips">
+      <div class="chip" data-v="12">12%</div>
+      <div class="chip active" data-v="18">18%</div>
+      <div class="chip" data-v="22">22%</div>
+      <div class="chip" data-v="28">28%</div>
+      <div class="chip custom-toggle" data-custom="spread">✎ своё</div>
+    </div>
+    <div class="custom-input-wrap" id="spreadCustomWrap">
+      <span>спред &gt;</span>
+      <input id="minSpread" type="text" inputmode="decimal" pattern="[0-9]*" value="18">
+      <span>%</span>
+      <div class="stepper">
+        <button id="spreadMinus">−</button>
+        <button id="spreadPlus">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-block">
+    <div class="filter-head">
+      <span class="label">Лимит сделки, ₽</span>
+      <span class="val" id="limitVal">до 5 000</span>
+    </div>
+    <div class="chips" id="limitChips">
+      <div class="chip" data-v="2000">2 000</div>
+      <div class="chip active" data-v="5000">5 000</div>
+      <div class="chip" data-v="15000">15 000</div>
+      <div class="chip" data-v="999999999">Любой</div>
+      <div class="chip custom-toggle" data-custom="limit">✎ своё</div>
+    </div>
+    <div class="custom-input-wrap" id="limitCustomWrap">
+      <span>лимит ≤</span>
+      <input id="maxLimit" type="text" inputmode="numeric" pattern="[0-9]*" value="5000">
+      <span>₽</span>
+      <div class="stepper">
+        <button id="limitMinus">−</button>
+        <button id="limitPlus">+</button>
+      </div>
+    </div>
+  </div>
 </div>
-<div id="loading">Загрузка ленты…</div>
-<div id="deals"></div>
+
+<div class="section-label"><span>СДЕЛКИ</span><span id="sortedLabel">по убыванию спреда</span></div>
+
+<div id="loading"><div class="spinner"></div>Подключение к ленте…</div>
+<div class="list" id="deals"></div>
+
+<div class="apply-bar" id="applyBar">
+  <button class="apply-btn" id="applyBtn">Применить фильтр</button>
+</div>
+
+<div class="footer-note">автообновление каждые 30 сек · курс ЦБ + 20%</div>
 
 <script>
   let tg;
-  try{ tg = window.Telegram.WebApp; tg.ready(); tg.expand(); }catch(e){}
+  try{
+    tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+    if (tg.setHeaderColor) tg.setHeaderColor('#05070C');
+    if (tg.setBackgroundColor) tg.setBackgroundColor('#05070C');
+    if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+  }catch(e){}
 
-  function tick(){
-    document.getElementById('clock').textContent = new Date().toLocaleTimeString('ru-RU');
+  function haptic(style){
+    try{ tg.HapticFeedback.impactOccurred(style || 'light'); }catch(e){}
   }
-  tick(); setInterval(tick, 1000);
+  function hapticSelect(){
+    try{ tg.HapticFeedback.selectionChanged(); }catch(e){}
+  }
 
   let allDeals = [];
+  let lastLoad = Date.now();
+  let state = { minSpread: 18, maxLimit: 5000, dirty:false };
 
+  const spreadInput = document.getElementById('minSpread');
+  const limitInput  = document.getElementById('maxLimit');
+  const spreadVal   = document.getElementById('spreadVal');
+  const limitVal    = document.getElementById('limitVal');
+  const applyBar    = document.getElementById('applyBar');
+
+  function fmtLimit(v){
+    if (v >= 999999999) return 'без ограничений';
+    return 'до ' + Number(v).toLocaleString('ru-RU');
+  }
+
+  function markDirty(){
+    state.dirty = true;
+    applyBar.classList.add('show');
+  }
+
+  // ---- chips ----
+  function wireChips(containerId, onPick){
+    const container = document.getElementById(containerId);
+    container.querySelectorAll('.chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        if (chip.dataset.custom){
+          const wrapId = chip.dataset.custom + 'CustomWrap';
+          const wrap = document.getElementById(wrapId);
+          wrap.classList.toggle('open');
+          if (wrap.classList.contains('open')){
+            wrap.querySelector('input').focus();
+          }
+          hapticSelect();
+          return;
+        }
+        container.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+        chip.classList.add('active');
+        document.getElementById(chip.dataset.custom ? '' : (containerId==='spreadChips'?'spreadCustomWrap':'limitCustomWrap'))?.classList.remove('open');
+        onPick(parseFloat(chip.dataset.v));
+        hapticSelect();
+      });
+    });
+  }
+
+  wireChips('spreadChips', v=>{
+    state.minSpread = v;
+    spreadInput.value = v;
+    spreadVal.textContent = v + '%';
+    markDirty();
+  });
+  wireChips('limitChips', v=>{
+    state.maxLimit = v;
+    limitInput.value = v;
+    limitVal.textContent = fmtLimit(v);
+    markDirty();
+  });
+
+  spreadInput.addEventListener('input', ()=>{
+    const v = parseFloat(spreadInput.value.replace(',', '.')) || 0;
+    state.minSpread = v;
+    spreadVal.textContent = v + '%';
+    document.querySelectorAll('#spreadChips .chip').forEach(c=>c.classList.remove('active'));
+    markDirty();
+  });
+  limitInput.addEventListener('input', ()=>{
+    const v = parseFloat(limitInput.value) || 0;
+    state.maxLimit = v;
+    limitVal.textContent = fmtLimit(v);
+    document.querySelectorAll('#limitChips .chip').forEach(c=>c.classList.remove('active'));
+    markDirty();
+  });
+
+  document.getElementById('spreadPlus').onclick = ()=>{ spreadInput.value = (parseFloat(spreadInput.value)||0)+1; spreadInput.dispatchEvent(new Event('input')); haptic('light'); };
+  document.getElementById('spreadMinus').onclick = ()=>{ spreadInput.value = Math.max(0,(parseFloat(spreadInput.value)||0)-1); spreadInput.dispatchEvent(new Event('input')); haptic('light'); };
+  document.getElementById('limitPlus').onclick = ()=>{ limitInput.value = (parseFloat(limitInput.value)||0)+500; limitInput.dispatchEvent(new Event('input')); haptic('light'); };
+  document.getElementById('limitMinus').onclick = ()=>{ limitInput.value = Math.max(0,(parseFloat(limitInput.value)||0)-500); limitInput.dispatchEvent(new Event('input')); haptic('light'); };
+
+  document.getElementById('applyBtn').addEventListener('click', ()=>{
+    haptic('medium');
+    applyBar.classList.remove('show');
+    state.dirty = false;
+    applyFilters();
+  });
+
+  // ---- Telegram MainButton mirrors apply ----
+  try{
+    tg.MainButton.setParams({ text: 'ПРИМЕНИТЬ ФИЛЬТР', color: '#5CFFB2', text_color: '#05070C' });
+  }catch(e){}
+  function syncMainButton(){
+    try{
+      if (state.dirty){ tg.MainButton.show(); } else { tg.MainButton.hide(); }
+    }catch(e){}
+  }
+  try{
+    tg.MainButton.onClick(()=>{
+      haptic('medium');
+      applyBar.classList.remove('show');
+      state.dirty = false;
+      applyFilters();
+    });
+  }catch(e){}
+
+  const origMarkDirty = markDirty;
+  markDirty = function(){ origMarkDirty(); syncMainButton(); };
+
+  // ---- data ----
   function parseCSVLine(line){
     const result = []; let current=''; let inQuotes=false;
     for(let i=0;i<line.length;i++){
@@ -191,34 +519,80 @@
             allDeals.push({nickname, price, minLimit, spread, online});
           }
         });
+        lastLoad = Date.now();
         applyFilters();
       })
       .catch(err=>{
         console.error(err);
         document.getElementById('loading').style.display='block';
-        document.getElementById('loading').textContent = 'Ошибка загрузки таблицы.';
+        document.getElementById('loading').innerHTML = 'Не удалось загрузить данные. Проверьте соединение.';
       });
   }
 
-  function applyFilters(){
-    const minSpread = parseFloat(document.getElementById('minSpread').value) || 18;
-    const maxLimit = parseFloat(document.getElementById('maxLimit').value) || 5000;
-    let html = '';
-    allDeals.forEach(deal=>{
-      if(deal.spread > minSpread && deal.minLimit <= maxLimit){
-        const isOn = deal.online === 'Online';
-        const spreadClass = deal.spread > minSpread * 1.3 ? 'hot' : 'warm';
-        html += `
-          <div class="row">
-            <div class="nick"><span class="dot ${isOn?'on':'off'}"></span>${deal.nickname}</div>
-            <div class="price">${deal.price}</div>
-            <div class="limit">лимит ${deal.minLimit}</div>
-            <div class="spread ${spreadClass}">${deal.spread}%</div>
-          </div>`;
-      }
-    });
-    document.getElementById('deals').innerHTML = html || '<div class="empty">Подходящих сделок нет.</div>';
+  function initials(name){
+    return (name || '?').trim().slice(0,2).toUpperCase();
   }
+
+  function applyFilters(){
+    const minSpread = state.minSpread;
+    const maxLimit = state.maxLimit;
+
+    let matches = allDeals.filter(d => d.spread > minSpread && d.minLimit <= maxLimit);
+    matches.sort((a,b)=> b.spread - a.spread);
+
+    document.getElementById('statCount').textContent = matches.length;
+    document.getElementById('statBest').textContent = matches.length ? matches[0].spread + '%' : '–';
+    document.getElementById('statOnline').textContent = matches.filter(d=>d.online==='Online').length;
+
+    const maxSpread = matches.length ? matches[0].spread : 1;
+
+    let html = '';
+    matches.forEach((deal, idx)=>{
+      const isOn = deal.online === 'Online';
+      const isTop = idx === 0 && deal.spread > minSpread * 1.15;
+      const warm = deal.spread < minSpread * 1.3;
+      const barPct = Math.max(8, Math.min(100, (deal.spread / maxSpread) * 100));
+      html += `
+        <div class="card ${isTop ? 'top' : ''}">
+          ${isTop ? '<div class="top-tag">TOP</div>' : ''}
+          <div class="card-top">
+            <div class="who">
+              <div class="avatar">${initials(deal.nickname)}</div>
+              <div class="who-text">
+                <div class="nick">${deal.nickname}</div>
+                <div class="status-row">
+                  <span class="dot ${isOn?'on':'off'}"></span>
+                  <span class="status-text">${isOn?'в сети':'не в сети'}</span>
+                </div>
+              </div>
+            </div>
+            <div class="spread-box">
+              <div class="spread-num ${warm ? 'warm' : ''}">${deal.spread}%</div>
+              <div class="spread-label">СПРЕД</div>
+            </div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${barPct}%"></div></div>
+          <div class="card-bottom">
+            <span class="price">₽ ${deal.price}</span>
+            <span class="limit">лимит до ${Number(deal.minLimit).toLocaleString('ru-RU')} ₽</span>
+          </div>
+        </div>`;
+    });
+
+    document.getElementById('deals').innerHTML = html || `
+      <div class="empty">
+        <div class="big">🔍</div>
+        <div class="msg">Подходящих сделок нет</div>
+        <div class="sub">попробуйте снизить порог спреда или увеличить лимит</div>
+      </div>`;
+  }
+
+  function tickAgo(){
+    const secs = Math.floor((Date.now() - lastLoad)/1000);
+    const el = document.getElementById('updatedAgo');
+    el.textContent = secs < 3 ? 'обновлено сейчас' : `обновлено ${secs} с назад`;
+  }
+  setInterval(tickAgo, 1000);
 
   loadDeals();
   setInterval(loadDeals, 30000);
