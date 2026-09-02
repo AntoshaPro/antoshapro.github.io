@@ -1,172 +1,227 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      padding: 20px;
-      background: var(--tg-theme-bg-color, #fff);
-      color: var(--tg-theme-text-color, #000);
-    }
-    .deal {
-      border: 1px solid #ddd;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 12px;
-      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
-    }
-    .spread { color: #00C853; font-weight: bold; font-size: 18px; }
-    .price { font-size: 16px; }
-    .limit { color: #888; }
-    .online { background: #66cc66; color: #fff; padding: 4px 8px; border-radius: 4px; }
-    .offline { background: #cc3333; color: #fff; padding: 4px 8px; border-radius: 4px; }
-    .filters {
-      margin-bottom: 20px;
-      padding: 15px;
-      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
-      border-radius: 12px;
-    }
-    .filters label {
-      margin-right: 15px;
-    }
-    .filters input {
-      width: 80px;
-      padding: 5px;
-      margin-left: 5px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    .filters button {
-      padding: 8px 16px;
-      background: #4285F4;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-left: 10px;
-    }
-    .filters button:hover {
-      background: #3367D6;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>P2P Order Book</title>
+<style>
+  :root{
+    --bg:#0A0E14;
+    --panel:#0F141C;
+    --line:#1C2430;
+    --text:#C9D1D9;
+    --dim:#5B6472;
+    --up:#3FB950;
+    --hot:#E3B341;
+    --off:#F85149;
+    --mono: ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    padding:0 0 32px;
+  }
+  header{
+    padding:18px 16px 14px;
+    border-bottom:1px solid var(--line);
+    position:sticky; top:0;
+    background:var(--bg);
+    z-index:5;
+  }
+  .title-row{
+    display:flex; align-items:baseline; justify-content:space-between;
+  }
+  h1{
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:.2px;
+    margin:0;
+    color:var(--text);
+  }
+  .clock{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--dim);
+  }
+  .cmd{
+    margin-top:12px;
+    display:flex;
+    gap:10px;
+    font-family:var(--mono);
+    font-size:12px;
+  }
+  .cmd .field{
+    flex:1;
+    display:flex;
+    align-items:center;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:7px 9px;
+    gap:6px;
+  }
+  .cmd .field span{ color:var(--dim); white-space:nowrap; }
+  .cmd input{
+    background:transparent;
+    border:none;
+    color:var(--hot);
+    font-family:var(--mono);
+    font-size:12px;
+    width:100%;
+    outline:none;
+  }
+  .cmd button{
+    font-family:var(--mono);
+    font-size:12px;
+    background:var(--hot);
+    color:#141008;
+    border:none;
+    border-radius:3px;
+    padding:0 14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .colhead{
+    display:grid;
+    grid-template-columns: 1.4fr .6fr 1fr 1fr;
+    gap:8px;
+    padding:10px 16px 6px;
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--dim);
+    letter-spacing:.4px;
+  }
+  #loading{ padding:24px 16px; font-family:var(--mono); font-size:12px; color:var(--dim); }
+  .row{
+    display:grid;
+    grid-template-columns: 1.4fr .6fr 1fr 1fr;
+    gap:8px;
+    align-items:center;
+    padding:11px 16px;
+    border-top:1px solid var(--line);
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  .row:hover{ background:var(--panel); }
+  .nick{
+    font-family:var(--sans);
+    font-size:13px;
+    color:var(--text);
+    display:flex; align-items:center; gap:6px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; flex:none; }
+  .dot.on{ background:var(--up); box-shadow:0 0 6px var(--up); }
+  .dot.off{ background:var(--off); }
+  .price{ color:var(--text); }
+  .limit{ color:var(--dim); }
+  .spread{ text-align:right; font-weight:600; }
+  .spread.hot{ color:var(--hot); }
+  .spread.warm{ color:var(--up); }
+  .empty{ padding:30px 16px; text-align:center; color:var(--dim); font-family:var(--mono); font-size:12px; }
+</style>
 </head>
 <body>
-  <h2>🔥 P2P Сделки</h2>
-  
-  <div class="filters">
-    <label>
-      Спред > 
-      <input type="number" id="minSpread" value="18" step="0.1"> %
-    </label>
-    <label>
-      Мин. лимит ≤ 
-      <input type="number" id="maxLimit" value="5000" step="100">
-    </label>
-    <button onclick="applyFilters()">Применить</button>
+<header>
+  <div class="title-row">
+    <h1>P2P / USDT&nbsp;·&nbsp;RUB</h1>
+    <div class="clock" id="clock">--:--:--</div>
   </div>
+  <div class="cmd">
+    <div class="field"><span>спред&gt;</span><input id="minSpread" type="number" value="18" step="0.1"></div>
+    <div class="field"><span>лимит≤</span><input id="maxLimit" type="number" value="5000" step="100"></div>
+    <button onclick="applyFilters()">GO</button>
+  </div>
+</header>
 
-  <div id="loading">Загрузка...</div>
-  <div id="deals"></div>
+<div class="colhead">
+  <div>Продавец</div><div></div><div>Цена</div><div style="text-align:right">Спред</div>
+</div>
+<div id="loading">Загрузка ленты…</div>
+<div id="deals"></div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+<script>
+  let tg;
+  try{ tg = window.Telegram.WebApp; tg.ready(); tg.expand(); }catch(e){}
 
-    let allDeals = [];
+  function tick(){
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('ru-RU');
+  }
+  tick(); setInterval(tick, 1000);
 
-    function parseCSVLine(line) {
-      const result = [];
-      let current = '';
-      let inQuotes = false;
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          result.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      result.push(current.trim());
-      return result;
+  let allDeals = [];
+
+  function parseCSVLine(line){
+    const result = []; let current=''; let inQuotes=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){ inQuotes=!inQuotes; }
+      else if(c===',' && !inQuotes){ result.push(current.trim()); current=''; }
+      else{ current+=c; }
     }
+    result.push(current.trim());
+    return result;
+  }
+  function parseNumber(str){
+    if(!str) return NaN;
+    return parseFloat(str.replace(/\s/g,'').replace(',', '.'));
+  }
 
-    function parseNumber(str) {
-      if (!str) return NaN;
-      return parseFloat(str.replace(/\s/g, '').replace(',', '.'));
-    }
-
-    function loadDeals() {
-      fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
-        .then(r => r.text())
-        .then(csv => {
-          document.getElementById('loading').style.display = 'none';
-
-          const rows = csv.trim().split(/\r?\n/);
-          const dataRows = rows.slice(5);
-
-          allDeals = [];
-
-          dataRows.forEach(row => {
-            const cols = parseCSVLine(row);
-
-            const nickname = cols[0] || '';
-            const price = cols[1] || '';
-            const minLimit = parseNumber(cols[2]);
-            const spread = parseNumber(cols[5]);
-            const online = (cols[7] || '').trim();
-
-            if (nickname && !isNaN(spread) && !isNaN(minLimit)) {
-              allDeals.push({
-                nickname,
-                price,
-                minLimit,
-                spread,
-                online
-              });
-            }
-          });
-
-          applyFilters();
-        })
-        .catch(err => {
-          console.error(err);
-          document.getElementById('loading').textContent = 'Ошибка загрузки таблицы.';
+  function loadDeals(){
+    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSYtCoCWnkrbziVbeg3htqL5mmh8_tfXxFf-uQ4K-Zs3lh8UIoN9olDELtiD02-dx5JBICjKmrif6XD/pub?gid=0&single=true&output=csv')
+      .then(r=>r.text())
+      .then(csv=>{
+        document.getElementById('loading').style.display='none';
+        const rows = csv.trim().split(/\r?\n/);
+        const dataRows = rows.slice(5);
+        allDeals = [];
+        dataRows.forEach(row=>{
+          const cols = parseCSVLine(row);
+          const nickname = cols[0] || '';
+          const price = cols[1] || '';
+          const minLimit = parseNumber(cols[2]);
+          const spread = parseNumber(cols[5]);
+          const online = (cols[7] || '').trim();
+          if(nickname && !isNaN(spread) && !isNaN(minLimit)){
+            allDeals.push({nickname, price, minLimit, spread, online});
+          }
         });
-    }
-
-    function applyFilters() {
-      const minSpread = parseFloat(document.getElementById('minSpread').value) || 18;
-      const maxLimit = parseFloat(document.getElementById('maxLimit').value) || 5000;
-
-      let html = '';
-
-      allDeals.forEach(deal => {
-        if (deal.spread > minSpread && deal.minLimit <= maxLimit) {
-          html += `
-            <div class="deal">
-              <b>${deal.nickname}</b>
-              <span class="${deal.online === 'Online' ? 'online' : 'offline'}">${deal.online}</span><br>
-              <span class="price">Цена: ${deal.price}</span> | 
-              <span class="spread">Спред: ${deal.spread}%</span><br>
-              <span class="limit">Мин. лимит: ${deal.minLimit}</span>
-            </div>
-          `;
-        }
+        applyFilters();
+      })
+      .catch(err=>{
+        console.error(err);
+        document.getElementById('loading').style.display='block';
+        document.getElementById('loading').textContent = 'Ошибка загрузки таблицы.';
       });
+  }
 
-      document.getElementById('deals').innerHTML = html || '<p>Подходящих сделок нет.</p>';
-    }
+  function applyFilters(){
+    const minSpread = parseFloat(document.getElementById('minSpread').value) || 18;
+    const maxLimit = parseFloat(document.getElementById('maxLimit').value) || 5000;
+    let html = '';
+    allDeals.forEach(deal=>{
+      if(deal.spread > minSpread && deal.minLimit <= maxLimit){
+        const isOn = deal.online === 'Online';
+        const spreadClass = deal.spread > minSpread * 1.3 ? 'hot' : 'warm';
+        html += `
+          <div class="row">
+            <div class="nick"><span class="dot ${isOn?'on':'off'}"></span>${deal.nickname}</div>
+            <div class="price">${deal.price}</div>
+            <div class="limit">лимит ${deal.minLimit}</div>
+            <div class="spread ${spreadClass}">${deal.spread}%</div>
+          </div>`;
+      }
+    });
+    document.getElementById('deals').innerHTML = html || '<div class="empty">Подходящих сделок нет.</div>';
+  }
 
-    loadDeals();
-    setInterval(loadDeals, 30000);
-  </script>
+  loadDeals();
+  setInterval(loadDeals, 30000);
+</script>
 </body>
 </html>
